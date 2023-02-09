@@ -33,4 +33,12 @@ public class CustomerService implements ICustomerService{
 		return p;
 	}
 
+	public String aMethod() {
+	    org.juanma.AnotherClass instance;
+	    instance.method();
+
+	    GenericClass<String> element = new GenericClass<String>("Hello world!");
+	    return element.get();
+	}
+
 }
