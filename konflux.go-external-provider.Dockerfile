@@ -3,8 +3,10 @@ COPY --chown=1001:0 . /workspace
 
 WORKDIR /workspace/external-providers/go-external-provider
 ENV GOEXPERIMENT strictfipsruntime
-RUN CGO_ENABLED=1 go build -tags strictfipsruntime -a -o go-external-provider main.go && \
-    GOBIN=/workspace/external-providers/go-external-provider CGO_ENABLED=1 go install -mod=readonly -tags strictfipsruntime golang.org/x/tools/gopls@v0.20.0
+RUN CGO_ENABLED=1 go build -tags strictfipsruntime -a -o go-external-provider main.go
+
+WORKDIR /workspace/hack/build/tools/gopls
+RUN CGO_ENABLED=1 go build -tags strictfipsruntime -buildvcs=false
 
 FROM registry.redhat.io/ubi9/ubi:latest
 
@@ -17,7 +19,7 @@ RUN chgrp -R 0 /addon && chmod -R g=u /addon
 USER 1001
 
 COPY --from=builder /workspace/external-providers/go-external-provider/go-external-provider /usr/local/bin/go-external-provider
-COPY --from=builder /workspace/external-providers/go-external-provider/gopls /usr/local/bin/gopls
+COPY --from=builder /workspace/hack/build/tools/gopls/gopls /usr/local/bin/gopls
 COPY --from=builder /usr/bin/go /usr/local/bin/go
 COPY --from=builder /usr/lib/golang /usr/lib/golang
 COPY --from=builder /workspace/LICENSE /licenses/
