@@ -7,13 +7,24 @@ RUN CGO_ENABLED=1 go build -tags strictfipsruntime -a -o python-external-provide
 
 FROM registry.redhat.io/ubi9/ubi:latest
 
-RUN dnf install -y python3 python3-pip openssl && \
-    dnf clean all && \
-    rm -rf /var/cache/dnf
-RUN python3 -m pip install --no-cache-dir 'python-lsp-server>=1.8.2'
+RUN dnf install -y gcc gcc-c++ python3 python3-devel openssl && \
+    python3 -m ensurepip --upgrade
 
 WORKDIR /addon
 RUN chgrp -R 0 /addon && chmod -R g=u /addon
+
+# Add steps for cachi2
+ENV REMOTE_SOURCES=${REMOTE_SOURCES:-"./hack/cachi2"}
+ENV REMOTE_SOURCES_DIR=${REMOTE_SOURCES_DIR:-"/remote-sources"}
+COPY ${REMOTE_SOURCES} ${REMOTE_SOURCES_DIR}
+COPY hack/cachi2/install.sh .
+RUN chmod +x install.sh && ./install.sh
+
+# Remove packages which are only needed for cachi2
+RUN dnf remove -y gcc gcc-c++ && \
+    dnf clean all && \
+    rm -rf /var/cache/dnf
+
 USER 1001
 
 COPY --from=builder /workspace/external-providers/python-external-provider/python-external-provider /usr/local/bin/python-external-provider
