@@ -9,6 +9,9 @@ FROM registry.redhat.io/ubi9/ubi:latest
 
 ENV NODEJS_VERSION=18
 
+RUN dnf install -y nodejs npm openssl && \
+    dnf clean all && \
+    rm -rf /var/cache/dnf
 COPY --from=builder /workspace/hack/build/typescript.tgz typescript.tgz
 COPY --from=builder /workspace/hack/build/typescript-language-server.tgz typescript-language-server.tgz
 RUN npm install -g typescript-language-server.tgz typescript.tgz
