@@ -8,11 +8,12 @@ RUN CGO_ENABLED=1 go build -tags strictfipsruntime -a -o nodejs-external-provide
 FROM registry.redhat.io/ubi9/ubi:latest
 
 ENV NODEJS_VERSION=18
-RUN echo -e "[nodejs]\nname=nodejs\nstream=${NODEJS_VERSION}\nprofiles=\nstate=enabled\n" > /etc/dnf/modules.d/nodejs.module
-RUN dnf install -y nodejs npm openssl && \
-    dnf clean all && \
-    rm -rf /var/cache/dnf
-RUN npm install -g typescript-language-server typescript
+
+COPY --from=builder /workspace/hack/build/typescript.tgz typescript.tgz
+COPY --from=builder /workspace/hack/build/typescript-language-server.tgz typescript-language-server.tgz
+RUN npm install -g typescript-language-server.tgz typescript.tgz
+RUN typescript-language-server --version
+RUN rm -r typescript.tgz typescript-language-server.tgz
 
 WORKDIR /addon
 RUN chgrp -R 0 /addon && chmod -R g=u /addon
