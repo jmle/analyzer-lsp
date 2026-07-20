@@ -6,7 +6,6 @@ IMG_JAVA_PROVIDER ?= localhost/java-provider:$(TAG)
 IMG_GENERIC_PROVIDER ?= localhost/generic-provider:$(TAG)
 IMG_GO_DEP_PROVIDER ?= localhost/golang-dep-provider:$(TAG)
 IMG_YQ_PROVIDER ?= localhost/yq-provider:$(TAG)
-IMG_C_SHARP_PROVIDER ?= quay.io/konveyor/c-sharp-provider:$(TAG)
 OS := $(shell uname -s)
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
@@ -72,13 +71,11 @@ stop-external-providers:
 	podman kill  golang-provider || true
 	podman kill  nodejs || true
 	podman kill  python || true
-	podman kill  c-sharp || true
 	podman rm java-provider || true
 	podman rm yq || true
 	podman rm golang-provider || true
 	podman rm nodejs || true
 	podman rm python || true
-	podman rm c-sharp || true
 
 run-external-providers-pod:
 	podman volume create test-data
@@ -89,7 +86,6 @@ run-external-providers-pod:
 	podman pod create --name=analyzer --userns=keep-id
 	podman run --pod analyzer --user=$(USER_ID) --name java-provider -d -v test-data:/analyzer-lsp/examples$(MOUNT_OPT) $(IMG_JAVA_PROVIDER) --port 14651
 	podman run --pod analyzer --user=$(USER_ID) --name yq -d -v test-data:/analyzer-lsp/examples$(MOUNT_OPT) $(IMG_YQ_PROVIDER) --port 14652
-	podman run --pod analyzer --user=$(USER_ID) --name c-sharp -d -v test-data:/analyzer-lsp/examples$(MOUNT_OPT) $(IMG_C_SHARP_PROVIDER) --port 14656
 	podman run --entrypoint /usr/local/bin/entrypoint.sh --pod analyzer --user=$(USER_ID) --name golang-provider -d -v test-data:/analyzer-lsp/examples$(MOUNT_OPT) $(IMG_GENERIC_PROVIDER) --port 14653
 	podman run --pod analyzer --user=$(USER_ID) --name nodejs -d -v test-data:/analyzer-lsp/examples$(MOUNT_OPT) $(IMG_GENERIC_PROVIDER) --port 14654 --name nodejs
 	podman run --pod analyzer --user=$(USER_ID) --name python -d -v test-data:/analyzer-lsp/examples$(MOUNT_OPT) $(IMG_GENERIC_PROVIDER) --port 14655 --name pylsp
