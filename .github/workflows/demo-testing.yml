@@ -15,7 +15,6 @@ jobs:
       java: ${{ steps.filter.outputs.java }}
       generic: ${{ steps.filter.outputs.generic }}
       yq: ${{ steps.filter.outputs.yq}}
-      c-sharp: ${{ steps.filter.outputs.c-sharp }}
       image_tag: ${{ steps.set-tag.outputs.image_tag }}
     steps:
       - uses: actions/checkout@v3
@@ -41,9 +40,6 @@ jobs:
               - '**'
               - '!external-providers/**'
               - 'external-providers/yq-external-provider/**'
-            c-sharp:
-              - '**'
-              - '!external-providers/**'
 
   build-bases:
     needs: detect-changes
@@ -93,12 +89,6 @@ jobs:
             image_name: yq-provider
             dockerfile: external-providers/yq-external-provider/Dockerfile
             checked_out: true
-          - provider: c-sharp
-            image_name: c-sharp-provider
-            dockerfile: Dockerfile
-            repo: konveyor/c-sharp-analyzer-provider
-            checked_out: false
-            cache-key-file: Cargo.lock
     steps:
       - uses: actions/checkout@v3
         if: needs.detect-changes.outputs[matrix.provider] == 'true'
@@ -164,18 +154,8 @@ jobs:
             demo-output-path: external-providers/yq-external-provider/e2e-tests/demo-output.yaml
             provider_settings-path: external-providers/yq-external-provider/e2e-tests/provider_settings.json
             testing-rules: external-providers/yq-external-provider/e2e-tests/rule-example.yaml
-          - provider: c-sharp
-            repo: "konveyor/c-sharp-analyzer-provider"
-            artifact_pattern: "{konveyor-analyzer-lsp,c-sharp-provider}"
-            test-data: testdata
-            image_name: c-sharp-provider
-            demo-output-path: e2e-tests/demo-output.yaml
-            provider_settings-path: e2e-tests/provider_settings.json
-            testing-rules: rulesets
     steps:
       - uses: actions/checkout@v3
-        with:
-          repository: ${{ matrix.repo || 'konveyor/analyzer-lsp' }}
         if: needs.detect-changes.outputs[matrix.provider] == 'true'
 
       - name: Download provider image artifacts
@@ -227,7 +207,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TAG: ${{ needs.detect-changes.outputs.image_tag }}
-      IMG_C_SHARP_PROVIDER: localhost/c-sharp-provider:${{ needs.detect-changes.outputs.image_tag }}
       IMG_ANALYZER: localhost/konveyor-analyzer-lsp:${{ needs.detect-changes.outputs.image_tag }}
     outputs:
       api_tests_ref: ${{ steps.extract-info.outputs.API_TESTS_REF }}
@@ -343,10 +322,42 @@ jobs:
       - name: push bundle image 
         run: |
           docker push ttl.sh/konveyor-operator-bundle-${GITHUB_SHA}:2h
-  e2e:
-    needs: test
-    uses: konveyor/ci/.github/workflows/global-ci-bundle.yml@main
-    with:
-      operator_bundle: ttl.sh/konveyor-operator-bundle-${{ github.sha }}:2h
-      tackle_hub: "quay.io/konveyor/tackle2-hub:${{ needs.test.outputs.tackle2_hub_tag }}"
-      api_tests_ref: "${{ needs.test.outputs.api_tests_ref }}"
+
+  koncur-kantra:
+    needs: [test]
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - os: "linux"
+            runner: "ubuntu-24.04-arm"
+          - os: "macos"
+            runner: "macos-26-large"
+          - os: "windows"
+            runner: "windows-latest"
+        exclude:
+          - os:
+              os: "macos"
+              runner: "macos-26-large"
+    runs-on: ${{ matrix.os.runner }}
+    steps:
+      - name: Run Koncur Testing
+        id: koncur-test
+        uses: konveyor/ci/koncur-kantra@main
+        with:
+          os: ${{ matrix.os.os }}
+          image_pattern: |
+            *{kantra,provider}--${{ github.run_id }}
+          ref: ${{ github.base_ref || inputs.ref || github.ref_name}}
+
+
+  koncur-tackle-hub:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test Hub with Koncur
+        uses: konveyor/ci/koncur-tackle-hub@main
+        with:
+          image_pattern: |
+            *{tackle-keyloak-init,tackle2-*,provider}--${{ github.run_id }}
+          ref: ${{ github.base_ref || inputs.ref || github.ref_name}}

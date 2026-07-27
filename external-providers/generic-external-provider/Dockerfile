@@ -43,7 +43,7 @@ RUN microdnf install gcc-c++ python-devel go-toolset python3-devel nodejs -y && 
     rm -rf /var/cache/dnf
 RUN python3 -m ensurepip --upgrade
 RUN python3 -m pip install 'python-lsp-server>=1.8.2'
-RUN npm install -g typescript-language-server typescript
+RUN npm install -g typescript-language-server typescript@6
 
 RUN GOBIN=/usr/local/bin go install golang.org/x/tools/gopls@v0.20.0
 
